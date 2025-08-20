@@ -7,7 +7,14 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/hooks/use-toast"
-import { Package, Calendar, MapPin, Eye } from "lucide-react"
+import { Package, Calendar, MapPin, Eye, X } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 interface Product {
   id: string
@@ -37,6 +44,8 @@ export function OrderHistory() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
+  const [viewingOrder, setViewingOrder] = useState<Order | null>(null)
+  const [cancellingId, setCancellingId] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -184,24 +193,105 @@ export function OrderHistory() {
 
             {/* Actions */}
             <div className="flex gap-2 pt-2">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => setViewingOrder(order)}>
                 <Eye className="w-4 h-4 mr-2" />
                 View Details
               </Button>
               {order.status === "pending" && (
-                <Button variant="outline" size="sm">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={cancellingId === order.id}
+                  onClick={async () => {
+                    setCancellingId(order.id)
+                    try {
+                      const res = await fetch(`/api/orders/${order.id}`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ status: "cancelled" }),
+                      })
+                      if (!res.ok) {
+                        let message = "Cancel failed"
+                        try {
+                          const err = await res.json()
+                          if (typeof err?.error === "string") message = err.error
+                        } catch {}
+                        throw new Error(message)
+                      }
+                      toast({ title: "Cancelled", description: "Your order was cancelled." })
+                      const refreshed = await fetch("/api/orders")
+                      if (refreshed.ok) setOrders(await refreshed.json())
+                    } catch (e) {
+                      const message = e instanceof Error ? e.message : "Failed to cancel order"
+                      toast({ title: "Error", description: message, variant: "destructive" })
+                    } finally {
+                      setCancellingId(null)
+                    }
+                  }}
+                >
                   Cancel Order
-                </Button>
-              )}
-              {order.status === "delivered" && (
-                <Button variant="outline" size="sm">
-                  Reorder
                 </Button>
               )}
             </div>
           </CardContent>
         </Card>
       ))}
+
+      {/* Order Details Dialog */}
+      <Dialog open={!!viewingOrder} onOpenChange={(open) => !open && setViewingOrder(null)}>
+        <DialogContent>
+          {viewingOrder && (
+            <div className="space-y-4">
+              <DialogHeader>
+                <DialogTitle>Order #{viewingOrder.id.slice(0, 8)}</DialogTitle>
+                <DialogDescription>
+                  Placed on {formatDate(viewingOrder.created_at)} • Status: {viewingOrder.status}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-3">
+                {viewingOrder.order_items.map((item) => (
+                  <div key={item.id} className="flex items-center gap-4">
+                    <div className="relative w-12 h-12 flex-shrink-0">
+                      <Image
+                        src={item.products.image_url || "/placeholder.svg"}
+                        alt={item.products.name}
+                        fill
+                        className="object-cover rounded-md"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-sm">{item.products.name}</h4>
+                      <p className="text-xs text-muted-foreground">
+                        {item.products.category} • Qty: {item.quantity}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium text-sm">${(item.price * item.quantity).toFixed(2)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <MapPin className="w-4 h-4" />
+                  <span>Shipping to:</span>
+                </div>
+                <pre className="whitespace-pre-wrap rounded-md bg-muted p-3 text-sm">
+{viewingOrder.shipping_address}
+                </pre>
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-muted-foreground">Total</span>
+                  <span className="text-lg font-semibold">${viewingOrder.total_amount.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

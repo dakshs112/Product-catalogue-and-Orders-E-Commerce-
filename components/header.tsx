@@ -88,7 +88,7 @@ export function Header() {
             {!loading && (
               <>
                 {user ? (
-                  <UserMenu user={user} />
+                  <UserMenu user={user} isAdmin={isAdmin} />
                 ) : (
                   <div className="hidden md:flex items-center space-x-2">
                     <Link href="/auth/login">

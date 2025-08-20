@@ -23,9 +23,10 @@ interface UserMenuProps {
       full_name?: string
     }
   }
+  isAdmin?: boolean
 }
 
-export function UserMenu({ user }: UserMenuProps) {
+export function UserMenu({ user, isAdmin }: UserMenuProps) {
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSignOut = async () => {
@@ -64,18 +65,22 @@ export function UserMenu({ user }: UserMenuProps) {
             <span>Profile</span>
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/orders" className="cursor-pointer">
-            <Package className="mr-2 h-4 w-4" />
-            <span>Orders</span>
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/settings" className="cursor-pointer">
-            <Settings className="mr-2 h-4 w-4" />
-            <span>Settings</span>
-          </Link>
-        </DropdownMenuItem>
+        {!isAdmin && (
+          <>
+            <DropdownMenuItem asChild>
+              <Link href="/orders" className="cursor-pointer">
+                <Package className="mr-2 h-4 w-4" />
+                <span>Orders</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/settings" className="cursor-pointer">
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Settings</span>
+              </Link>
+            </DropdownMenuItem>
+          </>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut} disabled={isLoading} className="cursor-pointer">
           <LogOut className="mr-2 h-4 w-4" />

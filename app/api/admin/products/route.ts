@@ -1,13 +1,16 @@
 import { createClient } from "@/lib/supabase/server"
+import { createClient as createServiceClient } from "@supabase/supabase-js"
 import { requireAdmin } from "@/lib/auth-utils"
 import { NextResponse } from "next/server"
 
 export async function GET() {
   try {
     await requireAdmin()
-    const supabase = await createClient()
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const client = serviceKey ? createServiceClient(supabaseUrl, serviceKey) : await createClient()
 
-    const { data: products, error } = await supabase
+    const { data: products, error } = await client
       .from("products")
       .select("*")
       .order("created_at", { ascending: false })
@@ -26,7 +29,13 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     await requireAdmin()
-    const supabase = await createClient()
+  } catch {
+    return NextResponse.json({ error: "Admin access required" }, { status: 403 })
+  }
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const client = serviceKey ? createServiceClient(supabaseUrl, serviceKey) : await createClient()
     const body = await request.json()
 
     const { name, description, price, stock_quantity, category, image_url } = body
@@ -35,7 +44,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "All fields are required" }, { status: 400 })
     }
 
-    const { data: product, error } = await supabase
+    const { data: rows, error } = await client
       .from("products")
       .insert({
         name,
@@ -46,15 +55,15 @@ export async function POST(request: Request) {
         image_url: image_url || null,
       })
       .select()
-      .single()
 
     if (error) {
       console.error("Error creating product:", error)
       return NextResponse.json({ error: "Failed to create product" }, { status: 500 })
     }
 
+    const product = Array.isArray(rows) ? rows[0] : rows
     return NextResponse.json(product, { status: 201 })
   } catch (error) {
-    return NextResponse.json({ error: "Admin access required" }, { status: 403 })
+    return NextResponse.json({ error: "Failed to create product" }, { status: 500 })
   }
 }

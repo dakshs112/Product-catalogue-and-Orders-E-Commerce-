@@ -112,7 +112,8 @@ export function ProductCard({ product, onAddToCart, onViewDetails, isAdmin }: Pr
             <Pencil className="w-4 h-4 mr-2" />
             Edit Product
           </Button>
-        ) : (
+        ) : null}
+        {!derivedIsAdmin && (
           <Button
             onClick={() => onAddToCart(product)}
             disabled={isOutOfStock}

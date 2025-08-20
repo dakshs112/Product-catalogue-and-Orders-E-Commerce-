@@ -64,12 +64,38 @@ export async function POST(request: Request) {
   }
 
   // Check if item already exists in cart
+  // Ensure a profile row exists to satisfy foreign key on cart_items
+  const { data: existingProfile, error: profileFetchError } = await supabase
+    .from("user_profiles")
+    .select("id")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  if (profileFetchError) {
+    console.error("Error checking user profile before cart insert:", profileFetchError)
+  }
+
+  if (!existingProfile) {
+    const { error: profileInsertError } = await supabase.from("user_profiles").insert({
+      id: user.id,
+      email: user.email,
+      full_name: (user.user_metadata as any)?.full_name || user.email,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    if (profileInsertError) {
+      console.error("Error creating user profile before cart insert:", profileInsertError)
+      return NextResponse.json({ error: "Failed to add cart item" }, { status: 500 })
+    }
+  }
+
+  // Check if item already exists in cart
   const { data: existingItem } = await supabase
     .from("cart_items")
     .select("id, quantity")
     .eq("user_id", user.id)
     .eq("product_id", product_id)
-    .single()
+    .maybeSingle()
 
   if (existingItem) {
     // Update existing item quantity
