@@ -4,32 +4,31 @@ import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 
 export async function signIn(prevState: any, formData: FormData) {
-  if (!formData) {
-    return { error: "Form data is missing" }
-  }
+  if (!formData) return { error: "Form data is missing" }
 
-  const email = formData.get("email")
-  const password = formData.get("password")
+  const email = String(formData.get("email") ?? "").trim()
+  const password = String(formData.get("password") ?? "")
+  const role = String(formData.get("role") ?? "").trim()
 
-  if (!email || !password) {
-    return { error: "Email and password are required" }
-  }
+  if (!email || !password) return { error: "Email and password are required" }
 
+  // server supabase client
   const supabase = await createClient()
 
-  try {
-    const { error } = await supabase.auth.signInWithPassword({
-      email: email.toString(),
-      password: password.toString(),
-    })
-
-    if (error) {
-      return { error: error.message }
+  // server-side enforcement: admin sign-in only for configured ADMIN_EMAIL
+  if (role === "admin") {
+    const adminEmail = (process.env.ADMIN_EMAIL ?? "").toLowerCase()
+    if (!adminEmail || email.toLowerCase() !== adminEmail) {
+      return { error: "Admin sign in is restricted to the designated admin email." }
     }
+  }
 
+  try {
+    const res = await supabase.auth.signInWithPassword({ email, password })
+    if (res.error) return { error: res.error.message }
     return { success: true }
-  } catch (error) {
-    console.error("Login error:", error)
+  } catch (err) {
+    console.error("Login error:", err)
     return { error: "An unexpected error occurred. Please try again." }
   }
 }
