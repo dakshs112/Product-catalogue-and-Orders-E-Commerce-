@@ -45,10 +45,6 @@ export default async function LoginSelectionPage() {
             User
           </Link>
         </div>
-
-        <p className="text-xs text-muted-foreground text-center">
-          
-        </p>
       </div>
     </div>
   )
