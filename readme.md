@@ -2,6 +2,7 @@
 
 A modern e-commerce storefront built with Next.js, Supabase, and a custom UI kit.  
 Features authentication, product browsing, cart and checkout, and an admin dashboard for managing products and orders.
+Deplyed link: product-catalogue-and-order-git-563827-dakshs112-1029s-projects.vercel.app
 
 ---
 
