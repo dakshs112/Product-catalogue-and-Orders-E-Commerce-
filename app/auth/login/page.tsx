@@ -47,7 +47,7 @@ export default async function LoginSelectionPage() {
         </div>
 
         <p className="text-xs text-muted-foreground text-center">
-          These links only choose which sign-in page variant to show — the authentication logic is unchanged.
+          
         </p>
       </div>
     </div>
